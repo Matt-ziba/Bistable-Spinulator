@@ -10,12 +10,14 @@ import javafx.stage.Screen;
 import javafx.stage.Stage;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Timer;
 
 
 public class main extends Application {
 
+    public static Date now;
     private final double angularSpeed = 10;
     private final double width = Screen.getPrimary().getVisualBounds().getWidth(); double height = Screen.getPrimary().getVisualBounds().getHeight();
     private final double[] center = {width/2, height/2};
@@ -54,14 +56,6 @@ public class main extends Application {
         AnimationTimer timer = new AnimationTimer() {
             @Override
             public void handle(long l) {
-                long currentTime = System.nanoTime();
-                if(System.currentTimeMillis() - startTime == spawnPeriod) {
-                    System.out.println("spawn");
-                    Circle enemy = circleSpawn();
-                    mainGroup.getChildren().add(enemy);
-                    movingCircle.add(enemy);
-                }
-
                 if(rotate) {
                     double rad = Math.toRadians(angle);
                     double x1 = revolveAxis[0] + offsetY * Math.sin(rad);
@@ -128,6 +122,5 @@ public class main extends Application {
         return new Circle(width, pos, 40, color);
 
     }
-    scheduler.
 
 }
