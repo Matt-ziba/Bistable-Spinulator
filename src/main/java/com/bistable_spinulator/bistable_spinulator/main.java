@@ -4,14 +4,15 @@ import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Group;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
+import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 
-import javax.security.auth.login.AppConfigurationEntry;
 import java.util.*;
 
 
@@ -24,68 +25,130 @@ public class main extends Application {
     private final double offsetX = 450;
     private final double[] revolveAxis = {center[0] - offsetX, center[1]};
     private final long spawnPeriod = 800;
-    private double lastSpawnTime = 1000;
-    private double startTime = 0;
     private double angle = 0;
     private int score = 0;
+    private int errors = 0;
 
     private boolean rotate = false;
 
     Circle PC1 = new Circle(40.0f, Color.rgb(224,108,117));
     Circle PC2 = new Circle(40.0f, Color.rgb(80,181,192));
-    Text ScoreBoard = new Text(String.valueOf(score));
+    Text Score = new Text("Score:");
+    Text ScoreValue = new Text(String.valueOf(score));
+    Text Mistakes = new Text("Mistakes:");
+    Text ErrorValue = new Text(String.valueOf(errors));
+    Text TitleScreen = new Text("START GAME");
+
+    Rectangle MenuButton = new Rectangle(575,100);
 
     private List<Circle> movingCircle = new ArrayList<>();
     private List<Circle> toBeRemoved = new ArrayList<>();
 
-    public Group mainGroup = new Group(PC1,PC2, ScoreBoard);
+    public Group mainGroup = new Group(PC1,PC2, ScoreValue, ErrorValue, Mistakes, Score, TitleScreen, MenuButton);
 
     @Override
     public void start(Stage stage) {
-        Timer period = new Timer();
-        ScoreBoard.setTranslateX(center[0]); ScoreBoard.setTranslateY(center[1] - 300);
-        ScoreBoard.setFill(Color.rgb(171,178,191));
-        ScoreBoard.setScaleX(5); ScoreBoard.setScaleY(5);
+
+        ScoreValue.setTranslateX(center[0] - width/4); ScoreValue.setTranslateY(center[1] - 300);
+        ScoreValue.setFill(Color.rgb(171,178,191));
+        ScoreValue.setScaleX(7); ScoreValue.setScaleY(7);
+
+        Score.setTranslateX(center[0] - width/4); Score.setTranslateY(center[1] - 390);
+        Score.setFill(Color.rgb(171,178,191));
+        Score.setScaleX(7); Score.setScaleY(7);
+
+        ErrorValue.setTranslateX(center[0] + width/4); ErrorValue.setTranslateY(center[1] - 300);
+        ErrorValue.setFill(Color.rgb(224,108,117));
+        ErrorValue.setScaleY(7); ErrorValue.setScaleX(7);
+
+        Mistakes.setTranslateX(center[0] + width/4); Mistakes.setTranslateY(center[1] - 390);
+        Mistakes.setFill(Color.rgb(224,108,117));
+        Mistakes.setScaleY(7); Mistakes.setScaleX(7);
+
+        TitleScreen.setTranslateX(center[0] - 50); TitleScreen.setTranslateY(center[1] - 50);
+        TitleScreen.setFill(Color.WHITE);
+        TitleScreen.setScaleY(8); TitleScreen.setScaleX(8);
+
+        MenuButton.setX(center[0] - 300); MenuButton.setY(center[1] - 100);
+        MenuButton.toBack();
+        MenuButton.setFill(Color.rgb(224,108,117));
+        MenuButton.setArcHeight(15); MenuButton.setArcWidth(15);
+
         PC1.setTranslateX(revolveAxis[0]); PC1.setTranslateY(revolveAxis[1] + offsetY);
         PC2.setTranslateX(revolveAxis[0]); PC2.setTranslateY(revolveAxis[1] - offsetY);
+        for (Node node : mainGroup.getChildren()) {
+            if(!node.equals(TitleScreen) && !node.equals(MenuButton)) {
+                node.setOpacity(0);
+                System.out.println(node);
+            }
+
+        }
 
         Scene scene = new Scene(mainGroup, width, height);
+        scene.setFill(Color.rgb(40,44,52));
 
+        stage.setFullScreen(true);
+        stage.setTitle("Bistable Spinulator");
+        stage.setScene(scene);
+        stage.show();
+        scene.setOnKeyPressed(keyEvent -> {
+            if(keyEvent.getCode().toString().equals("SPACE")) {
+                removeNode(TitleScreen);
+                removeNode(MenuButton);
+                run(stage, scene);
+            }
+        });
+    }
+    public void run(Stage stage, Scene scene) {
+        Timer period = new Timer();
+
+        for (Node node : mainGroup.getChildren()) {
+            node.setOpacity(1);
+        }
         scene.setOnKeyPressed(keyEvent -> {
             if(keyEvent.getCode().toString().equals("SPACE")) {
                 rotate = true;
             }
             if(keyEvent.getCode().toString().equals("S") || keyEvent.getCode().toString().equals("DOWN")) {
-                for(Circle enemy : movingCircle) {
-                    if((enemy.getTranslateX() > 278 && enemy.getTranslateX() < 358) && enemy.getTranslateY() == revolveAxis[1] + offsetY) {
-                        if(angle == 0 && enemy.getFill().equals(Color.rgb(224,108,117))) {
-                            killEnemy(enemy);
-                            incrementScore();
-                        } else if (angle == 200 && enemy.getFill().equals(Color.rgb(80, 181, 192))) {
-                            killEnemy(enemy);
-                            incrementScore();
-                        }
+                try {
+                    for (Circle enemy : movingCircle) {
+                        if ((enemy.getTranslateX() > 278 && enemy.getTranslateX() < 358) && enemy.getTranslateY() == revolveAxis[1] + offsetY) {
+                            if (angle == 0 && enemy.getFill().equals(Color.rgb(224, 108, 117))) {
+                                killEnemy(enemy, PC1);
+                                incrementScore();
+                            } else if (angle == 200 && enemy.getFill().equals(Color.rgb(80, 181, 192))) {
+                                killEnemy(enemy, PC2);
+                                incrementScore();
+                            }
 
+                        }
                     }
+                } catch (ConcurrentModificationException ignored) {
+
                 }
             }
             if(keyEvent.getCode().toString().equals("W") || keyEvent.getCode().toString().equals("UP")) {
-                for(Circle enemy : movingCircle) {
-                    if((enemy.getTranslateX() > 278 && enemy.getTranslateX() < 358) && enemy.getTranslateY() == revolveAxis[1] - offsetY) {
-                        if(angle == 200 && enemy.getFill().equals(Color.rgb(224,108,117))) {
-                            killEnemy(enemy);
-                            incrementScore();
-                        } else if (angle == 0 && enemy.getFill().equals(Color.rgb(80, 181, 192))) {
-                            killEnemy(enemy);
-                            incrementScore();
-                        }
+                try {
+                    for (Circle enemy : movingCircle) {
+                        if ((enemy.getTranslateX() > 278 && enemy.getTranslateX() < 358) && enemy.getTranslateY() == revolveAxis[1] - offsetY) {
+                            if (angle == 200 && enemy.getFill().equals(Color.rgb(224, 108, 117))) {
+                                killEnemy(enemy, PC1);
+                                incrementScore();
+                            } else if (angle == 0 && enemy.getFill().equals(Color.rgb(80, 181, 192))) {
+                                killEnemy(enemy, PC2);
+                                incrementScore();
+                            }
 
+                        }
                     }
+                } catch (ConcurrentModificationException ignored) {
+
                 }
             }
+            if(keyEvent.getCode().toString().equals("R")) {
+                reset();
+            }
         });
-
-        startTime = System.currentTimeMillis();
 
         AnimationTimer timer = new AnimationTimer() {
             @Override
@@ -122,7 +185,6 @@ public class main extends Application {
             }
         };
         timer.start();
-        lastSpawnTime = System.nanoTime();
 
         Timer timerTask = new Timer();
         timerTask.scheduleAtFixedRate(new TimerTask() {
@@ -133,18 +195,12 @@ public class main extends Application {
                     mainGroup.getChildren().add(newCircle);
                     movingCircle.add(newCircle);
                     for(Circle enemy : toBeRemoved) {
-                        removeEnemy(enemy);
+                        removeNode(enemy);
                     }
                 });
             }
         }, 0, spawnPeriod);
-
-        scene.setFill(Color.rgb(40,44,52));
-        stage.setTitle("Bistable Spinulator");
-        stage.setScene(scene);
-        stage.show();
     }
-
 
     public static void main(String[] args) {
         launch();
@@ -172,17 +228,57 @@ public class main extends Application {
         }
         return  enemy;
     }
-    public void removeEnemy(Circle enemy) {
-        movingCircle.remove(enemy);
+    public void removeNode(Node enemy) {
+        if(movingCircle.contains(enemy)) {
+            movingCircle.remove(enemy);
+        }
         mainGroup.getChildren().remove(enemy);
     }
-    public void killEnemy(Circle enemy) {
+    public void killEnemy(Circle enemy, Circle PC) {
         movingCircle.remove(enemy);
         mainGroup.getChildren().remove(enemy);
+        deathAnimation(PC);
     }
     public void incrementScore() {
         score++;
-        ScoreBoard.setText(String.valueOf(score));
+        ScoreValue.setText(String.valueOf(score));
     }
-
+    public void incrementError() {
+        errors++;
+         ErrorValue.setText(String.valueOf(errors));
+    }
+    public void deathAnimation(Circle PC) {
+        final int[] radius = {40};
+        final double[] opacity = {1.00};
+        Circle deathAnimation = new Circle(PC.getTranslateX(), PC.getTranslateY(), PC.getRadius(), Color.rgb(171,178,191));
+        deathAnimation.toBack();
+        mainGroup.getChildren().add(deathAnimation);
+        Timer timerTask = new Timer();
+        timerTask.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                Platform.runLater(() -> {
+                    if(deathAnimation.getRadius() < 80) {
+                        deathAnimation.setRadius(radius[0]);
+                        deathAnimation.setOpacity(opacity[0]);
+                    } else {
+                        removeNode(deathAnimation);
+                        timerTask.cancel();
+                    }
+                    radius[0]++;
+                    opacity[0] = opacity[0] - 0.025;
+                });
+            }
+        }, 0, 6);
+    }
+    public void reset() {
+        score = 0;
+        ScoreValue.setText(String.valueOf(score));
+        List<Circle> killList = new ArrayList<>();
+        killList.addAll(movingCircle);
+        for(Circle c : killList) {
+            removeNode(c);
+        }
+        killList.clear();
+    }
 }
